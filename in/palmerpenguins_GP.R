@@ -6,14 +6,12 @@ library(here)
 
 # install.packages("palmerpenguins")
 # library(palmerpenguins) # to load, BUT no need if you use namespace ;)
-
-palmerpenguins::penguins
 raw <- palmerpenguins::penguins_raw
 
 
 # Get info about "penguins_raw" --------------------------------------------
 
-# ?penguins_raw
+?penguins_raw
 # A tibble with 344 rows and 17 variables:
 
 
@@ -25,19 +23,40 @@ raw <- palmerpenguins::penguins_raw
 
 # Make col names easier to work with (replace space and non alpha num characters) --------------------------------
 
-# Use to test regex
-names(raw) %>% str_view_all(., "o/oo")
-
-
 names(raw) <- str_replace_all(names(raw), " ", "_")
 names(raw) <- str_replace_all(names(raw), "\\(|\\)", "")
 names(raw) <- str_replace_all(names(raw), "_o/oo", "")
 names(raw)
 
 
+
+
+# Make comments wide and save as excel and remove from "raw" --------------------------
+raw$Comments %>% unique() # only 11 values 
+
+comments <- raw %>% 
+  pivot_wider(
+    names_from = Comments,
+    values_from = Comments
+    # values_fn = ~ mean(.x, na.rm = TRUE)
+    # values_fn = ~if_else(is.na(), NA, "x")
+  ) %>% 
+  mutate_at(c(17:27), ~ifelse(is.na(.), "NA", "x")) %>% 
+  select(-"NA") %>% 
+    select(studyName, Sample_Number, Species, Individual_ID, c(17:26)) %>% 
+  # mutate_at(c(5:14), ~ifelse(. == "NA", 0, 1)) %>% 
+  view() 
+
+
+# install.packages("writexl")
+writexl::write_xlsx(comments, "./Palmer_comments.xlsx")
+
+
+
+
 # Remove useless vars ------------------
 raw <- raw %>% 
-  select(-c(Region, Stage, Clutch_Completion))
+  select(-c(Region, Stage, Clutch_Completion, Comments))
 
 
 # Simulate incomplete data set from last study (PAL0910) ------------------
@@ -46,6 +65,7 @@ raw$studyName %>% unique()
 # Subset so I can work on this ...
 PAL0910 <- raw %>% 
   filter(studyName == "PAL0910") %>% 
+  # rename(Study_Name = studyName) %>% 
   write_csv("./PAL0910.csv")
 
 # ... to drop a big part of the readings (so that it looks incomplete)
@@ -58,11 +78,11 @@ raw_small <- anti_join(raw, to_remove,
 
 # Add typos ------------------------------
 
-# Error 1: obvious misspelling (species)
+## Error 1: obvious misspelling (species) ------------------------------
 raw_small$Species[133] <- "Gentoo"
 raw_small$Species %>% unique()
 
-# DROP THIS ONE FOR NOW Error 2: missing info (Species) -> correct based on Individual_ID
+# DROP THIS ONE FOR NOW Error 2: missing info (Species) -> correct based on Individual_ID ---------------
 # find individual that has more than 2 readings so I can be sure about the spp
 raw_small %>% 
   group_by(Individual_ID) %>% 
@@ -86,20 +106,23 @@ ggplot(raw, aes(x = Species,
   
 
 
-# Error 2: tricky (Individual_ID, double "A" in name)
+# Error 2: tricky (Individual_ID, double "A" in name) --------------------
 raw_small$Individual_ID[21] #  "N11A1"
 raw_small$Individual_ID[21] <- "N11AA1"
 
-# Error 2: tricky (Date wrong year 2090 instead of 2009)
-raw$Date_Egg[127] # "2009-11-21"
-raw$Date_Egg[127] <- "2090-11-21"
-
+# # Error 3: tricky (Date wrong year 2090 instead of 2009) ----------------------
+# raw$Date_Egg[127] # "2009-11-21"
+# raw$Date_Egg[127] <- "2090-11-21"
+# raw$Date_Egg[127]
 
 
 
 
 # Then export as CSV
 write_csv(raw_small, "./palmer_rawdata.csv")
+
+
+# XXXXXXXXXXXXX STOPS HERE XXXXXXXXXXXXXXXXXXXXX -----------------------------
 
 
 
