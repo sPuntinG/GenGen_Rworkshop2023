@@ -128,26 +128,55 @@ raw %>%
 ## Import new data ----------------
 PAL0910 <- read_csv("./in/PAL0910.csv")
 
+
+# Before joinig: Check if variable have the same names ------------
+
+names(PAL0910) == names(raw) # looks like name of 1st var of PAL0910 doesn't match w/ same in raw
+
+names(PAL0910)[1] 
+names(raw)[1]
+
+# Let's rename it
+PAL0910 <- PAL0910 %>% 
+  rename(Study_Name = studyName)
+
+names(PAL0910) == names(raw) # now we can join
+# Note: You don't need ALL variables to be found in both tibbles! 
+#  But in this case is convenient ...
+ 
+
+
 ## Join ---------------------
 
-raw2 <- left_join(raw, PAL0910)
+raw2 <- full_join(raw, PAL0910)
+# Note that "raw2" has 104 more rows than "raw" (344 - 240)
 
-# Note that "raw2" has the same nr of rows as "raw", but one extra col
-#  let's check why is that 
-#  (answer: non-matching col name studyName != Study_Name)
 
-# What to do with "studyName"
-# Could remove, but let's see how to quickly chack if
-#  values from two variables match (in this case "Study_Name" with "studyName")
-raw2 %>% 
-  mutate(matching = ifelse(studyName == Study_Name, "Yes", "Nope")) %>% 
-  relocate(studyName, .after = Study_Name) %>% 
-  relocate(matching, .after = studyName) %>% 
-  view()
-           
-# Ok, can drop raw$studyName as it doesn't have any "new" info
-raw2 <- raw2 %>% 
-  select(-studyName)
+
+# #  let's check why is that 
+# #  (answer: non-matching col name studyName != Study_Name)
+# 
+# # What to do with "studyName"
+# # Could remove, but let's see how to quickly chack if
+# #  values from two variables match (in this case "Study_Name" with "studyName")
+# raw2 %>% 
+#   mutate(matching = ifelse(studyName == Study_Name, "Yes", "Nope")) %>% 
+#   relocate(studyName, .after = Study_Name) %>% 
+#   relocate(matching, .after = studyName) %>% 
+#   view()
+# 
+# 
+# # Ok, can drop raw$studyName as it doesn't have any "new" info
+# raw2 <- raw2 %>% 
+#   select(-studyName)
+
+
+## Filter to keep only new data --------------
+# Rows of PAL0910 that were not present in raw
+# (a way to double check that the merging is correct: e.g. it didn't create duplicated values)
+new_data <- anti_join(PAL0910, raw) #%>% view()
+
+nrow(new_data) # 104
 
 
 rm(raw)
@@ -156,7 +185,7 @@ rm(raw)
 
 ## Individual ID --------------------
 raw2$Individual_ID %>% unique() # roughly see what it looks like
-raw2$Individual_ID %>% unique() %>% length() # how many unique values? 155
+raw2$Individual_ID %>% unique() %>% length() # how many unique values? 191
 
 # How long are these ID names? (number of characters of each ID)?
 raw2$Individual_ID %>% nchar() # see al lot of 4's and 5's, but hard to spot other numbers ...
@@ -184,11 +213,43 @@ raw2 %>%
 
 raw2 %>% 
   mutate(Individual_ID_letters = str_extract_all(Individual_ID, "[:alpha:]")) %>% 
-  pull(Individual_ID_letters) %>% unique() 
+  pull(Individual_ID_letters) %>% unique()  # creates a list of 2 vectors
   # Looks like one valus has an extra A ...
 
+# Inspect: filter() & str_detect()
+raw2 %>% 
+  filter(stringr::str_detect(Individual_ID, "AA"))
+
+# Look at it in the context of the table (see with previous and following values)
+raw2 %>% 
+  mutate(ID_tocheck = ifelse(stringr::str_detect(Individual_ID, "AA"), "x", "")) %>% 
+  view() # Looks like someone accidentally pressed "A" twice ...
+   
+
+# Fix this with str_replace -------------------------------
+
+# Note: we could have also used recode() as we did before:
+# `raw2$Individual_ID <- recode(raw2$Individual_ID, "N11AA1" = "N11A1")` 
+
+raw3 <- raw2 %>% 
+  mutate(
+    Individual_ID = stringr::str_replace(Individual_ID, "AA", "A")
+  ) 
+
+# Check if "AA" still present in tibble:
+raw3 %>% 
+  filter(stringr::str_detect(Individual_ID, "AA")) %>% 
+  view() # empty = good!
 
 
+
+# Create new character variables ---------------------------
+
+
+
+
+
+# SKIP {lubridate}  AS GenGen proba don't work with datetime ---------------------------
 
 
 
