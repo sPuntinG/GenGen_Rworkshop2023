@@ -150,16 +150,52 @@ raw2 <- raw2 %>%
   select(-studyName)
 
 
-# RESUME FROM HERE (since 03 Feb) ==================================
+rm(raw)
+
 
 
 ## Individual ID --------------------
-raw$Individual_ID %>% unique() # roughly see what it looks like
-raw$Individual_ID %>% unique() %>% length() # check how many unique values
+raw2$Individual_ID %>% unique() # roughly see what it looks like
+raw2$Individual_ID %>% unique() %>% length() # how many unique values? 155
+
+# How long are these ID names? (number of characters of each ID)?
+raw2$Individual_ID %>% nchar() # see al lot of 4's and 5's, but hard to spot other numbers ...
+raw2$Individual_ID %>% nchar() %>% unique() # 4 5 6
+raw2$Individual_ID %>% nchar() %>% range() # 4 6
+
+# Look for patterns in character strings  with {stringr} ------------------------
 
 # Use {stringr} to extract (and check) patterns in the ID names
 
+## View (in "Viewer" pane) ------------------
+str_view_all(raw2$Individual_ID, "[:alpha:]")
+   # good but not great for many entries (doesn't show all)
 
+raw2 %>% 
+  mutate(Individual_ID_letters = str_extract_all(Individual_ID, "[:alpha:]")) %>% 
+  view()
+  
+# raw2 %>% 
+#   mutate(Individual_ID_letters = str_match_all(Individual_ID, "[:alpha:]")) %>% 
+#   view()
+
+# Looks like all "Individual_ID contain N and A,
+#  but let's check if all the same
+
+raw2 %>% 
+  mutate(Individual_ID_letters = str_extract_all(Individual_ID, "[:alpha:]")) %>% 
+  pull(Individual_ID_letters) %>% unique() 
+  # Looks like one valus has an extra A ...
+
+
+
+
+
+
+
+
+
+# RESUME FROM HERE (since 03 Feb) ==================================
 
 
 
