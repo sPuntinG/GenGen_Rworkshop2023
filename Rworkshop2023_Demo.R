@@ -1,11 +1,11 @@
 
 # Install packages ------------------------------------
 
-# Start with (installing and) 
+# Start with #(installing and) 
 # loading the packages that I will use
 
-# TO DO: find the if(require)...install ...
-
+# if (!require("tidyverse")) install.packages("tidyverse")
+# if (!require("here")) install.packages("here")
 library(tidyverse) # see in console that it loads a number of packages (and warns for conflicts)
 library(here) # To work with relative (to the script location) paths (no more setwd() ... !)
 
@@ -77,13 +77,7 @@ raw$Species <- recode(raw$Species, "Gentoo" = "Gentoo penguin (Pygoscelis papua)
 # Check again 
 raw$Species %>% unique() # all good
 
-# # Unsafe because if we have more than one "Gentoo" it will replace all 
-# # But we might want to make this more specific ...
-# 
-# # NOT SURE I WANT TO GO THROUGH THIS ROAD
-
-# TO DO MAYBE Think of replacing 2 missing values, of which we known that one is one species and the other is another species
-
+# Note: be careful with this: it will replace all "Gentoo" 
 
 
 ## Check nr of replicates per study (use group_by() + summarize() ) ------------------------
@@ -105,14 +99,15 @@ raw %>%
   # we can also directly check nr of spp per study
 raw %>% 
   group_by(Study_Name) %>% 
-  summarise(nr_of_species = length(unique(Species))) %>% # note `unique()`
+  # summarise(nr_of_species = length(unique(Species))) %>% # note `unique()` 
+  summarise(nr_of_species = n_distinct(Species)) %>%
   view()
   # now it's clear that one species is missing from last study 
 
 # Also: check if any study has < 3 spp 
 raw %>% 
   group_by(Study_Name) %>% 
-  summarise(nr_of_species = length(unique(Species))) %>% # note `unique()`
+  summarise(nr_of_species = n_distinct(Species)) %>% # note `unique()`
   filter(nr_of_species < 3) %>%  # add this filter
   view()
 
@@ -154,7 +149,7 @@ names(PAL0910) == names(raw) # now we can join
  
 
 
-## Join ---------------------
+## full_join: keep everything ---------------------
 
 raw2 <- full_join(raw, PAL0910) 
 # Note that full_join() automatically identifies cols with same name (if none it wil tell you and you can specify it manually)
@@ -162,7 +157,7 @@ raw2 <- full_join(raw, PAL0910)
 
 
 
-## Other uses of `*_join()`: keep only "new" (non-matching) values --------------
+## anti_join(): keep only "new" (non-matching) values --------------
 
 # Rows of PAL0910 that were NOT present in raw
 # (a way to double check that the merging is correct: e.g. it didn't create duplicated values)
@@ -184,11 +179,13 @@ rm(raw)
 # overview of values in this var
 raw2$Individual_ID %>% unique() # roughly see what it looks like
 raw2$Individual_ID %>% unique() %>% length() # how many unique values? 191
+raw2$Individual_ID %>% n_distinct() 
 
 # How long are these ID names? (number of characters of each ID)?
 raw2$Individual_ID %>% nchar() # see al lot of 4's and 5's, but hard to spot other numbers ...
 raw2$Individual_ID %>% nchar() %>% unique() # 4 5 6
 raw2$Individual_ID %>% nchar() %>% range() # 4 6
+
 
 
 ## Look for patterns in character strings with {stringr} ------------------------
@@ -243,13 +240,13 @@ raw3 %>%
 
 
 
-# Create new (character) variables ---------------------------
+## Extract info from string -------------------------------
 
 # Extract info from Individual_ID as "N_nr" and "A_nr" (keep only nr that follow N and A)
 
 # Use str_view() to test regex
 stringr::str_view_all(raw3$Individual_ID[1], "^[:alpha:]{1}[:digit:]{1,2}") # keep N + nr
-stringr::str_view_all(raw3$Individual_ID[1], "N[:digit:]{1,2}")         # same as above
+stringr::str_view_all(raw3$Individual_ID[1], "N[:digit:]{1,2}")         # same as above, keep N + nr
 stringr::str_view_all(raw3$Individual_ID[111], "(?<=N)[:digit:]{1,}") # >=1 digits preceded by "N"
 
 raw3 <- raw3 %>% 
@@ -303,13 +300,6 @@ raw3 <- raw3 %>%
   view()
 
 
-# Add short name var
-raw3 %>% 
-  mutate(
-    Ver_short = str_extract(Vernacular, "^\\w")
-  ) %>% view()
-
-
 
 ## use `paste()` to append spp info to Individual_ID -------------------
 
@@ -321,7 +311,7 @@ raw3 %>%
 
 raw3 %>% 
   group_by(Individual_ID) %>% 
-  summarise(spp = length(unique(Species)))
+  summarise(spp = n_distinct(Species))
 
 # => Let's make it unique by appending the first 3 letters of "Vernacular" to "Individual_ID"
 raw3 <- raw3 %>% 
@@ -331,13 +321,29 @@ raw3 <- raw3 %>%
 # Check if "Individual_ID_spp" has only unique values
 raw3 %>% 
   group_by(Individual_ID_spp) %>% 
-  summarise(spp = length(unique(Species))) %>% 
+  summarise(spp = n_distinct(Species)) %>% 
   filter(spp > 1) # good :)
 
+
+# Split cells (genus-/-species) ---------------------------
+raw3 %>% 
+  separate(Scientific, 
+           into = c("Scientific_Genus", "Scientific_species"), # names of new vars
+           sep = " ", # define deparator
+           remove = F) %>% # to keep var "Species"
+  view()
+  
 
 
 
 # Add info from Excel table: "Comments.xlsx"  ------------------------
+
+# This is an excel sheet that contains comments about individual penguins
+#  about sample collection or behavior, where info was recorded by "ticking"
+#  the appropriate box (mark with an x when comment applies to penguin)
+
+# Open in excel to see ...
+# ... then import in R
 
 
 ## Import excel table -----------------------------------
@@ -345,54 +351,215 @@ raw3 %>%
 library(readxl)
 comments <- readxl::read_excel("./in/Palmer_comments.xlsx") # {readxl} not part of tidyverse
 
-
-# RESUME FROM HERE (since 03 Feb) ==================================
-
-
+# Note that the table has a "wide" format, which is unpractical
+#  -> make it "long"
 
 
-# Merge to our data --------------------------
-data <- left_join(raw, comments, by = c("studyName", "Sample_Number", "Species", "Individual_ID"))
-
-# NOTE: data is wide! Which is annoying ... so make long!
 
 
 # Pivot "long" (instead of "wide" format of "comments") --------------------------
 
+# First pivot long
 comments_long <- comments %>% 
   pivot_longer(
     cols = -c(1:4),
     names_to = "Comments",
     values_to = "Comments_value"
-  ) %>% 
-  # filter(!is.na(Comments_value)) %>%  # doesn't work because is character!
-  filter(Comments_value != "NA") %>% 
-  select(-Comments_value) %>% view()
+  ) 
+
+# Now see that we have more rows than we need: 
+#    NA's can be removed (just say that the comment doesn't apply to the respective row)
+comments_long <- comments_long %>% 
+  filter(!is.na(Comments_value)) %>% #view() # Note: filter with negation ("!") to leave out rows with NA
+  select(-Comments_value) #%>% view() # No need this col anymore
+
+
+
+
+# Merge to our data --------------------------
+raw4 <- left_join(raw3, comments_long, 
+                  by = c("Study_Name" = "studyName", # cols with different names (but same type of data)
+                         "Sample_Number", "Species", "Individual_ID"))
 
 # Remove "comments" since we don't need it anymore
 rm(comments)
+rm(raw2, raw3, raw3_Ntokeep)
+
+
+
+# Export summary table -----------------------------------------------
+
+# Now we're done with edits and checks on our data and we want to export it
+# ... as it is
+write_csv(raw4, "./out/raw4.csv")
+
+# ... as summary of certain parameters: i.e.,
+#  mean of each numeric var, grouped by Species, Sex and Island
+raw4 %>% 
+  group_by(Species, Sex, Island) %>% 
+  summarise(across(where(is.numeric), ~ mean(.x, na.rm = TRUE))) %>% 
+  select(-Sample_Number) %>%  # exclude because doesn't meke sense to calc. mean of this
+  arrange(desc(Sex)) %>% # use to arrange display (in this case Male/Female) 
+  view() %>% 
+  write_csv(., "./out/raw4_means.csv")
+  
+
+
+
+
+# Plot with `ggplot()` --------------------------------------------------
+
+
+## Comparison with base R plots --------------
+
+#  Basic plots are easier in base R ...  
+
+# Base R
+plot(raw4$Culmen_Length_mm, raw4$Culmen_Depth_mm) # I don't know why I get this error ...
+
+# GGplot 
+ggplot(data = raw4, aes(x = Culmen_Length_mm,
+                        y = Culmen_Depth_mm)) +
+  geom_point()
+
+# ... but ggplot blows minds for complex designs
+
+### Building up a ggplot step by step (use layers) ------------------
+
+# Canvas only
+ggplot(data = raw4, aes(x = Culmen_Length_mm,
+                        y = Culmen_Depth_mm)) 
+
+# Canvas + points (scatter plot) 
+ggplot(data = raw4, aes(x = Culmen_Length_mm,
+                        y = Culmen_Depth_mm)) +
+  geom_point()
+
+# Canvas + points (scatter plot) + color by factor
+ggplot(data = raw4, aes(x = Culmen_Length_mm,
+                        y = Culmen_Depth_mm)) +
+  geom_point(aes(color = Species))
+
+# Add correlation lines
+ggplot(data = raw4, aes(x = Culmen_Length_mm,
+                        y = Culmen_Depth_mm)) +
+  geom_point(aes(color = Species)) +
+  geom_smooth(aes(color = Species),
+              method = "lm")
+
+# Change theme to look nicer
+ggplot(data = raw4, aes(x = Culmen_Length_mm,
+                        y = Culmen_Depth_mm)) +
+  geom_point(aes(color = Species)) +
+  geom_smooth(aes(color = Species),
+              method = "lm",
+              formula = 'y ~ x',
+              se = F) +
+  theme_bw() +
+  theme(
+    legend.position = "bottom"
+  )
+
+# Faceting (small multiples)
+ggplot(data = raw4, aes(x = Culmen_Length_mm,
+                        y = Culmen_Depth_mm)) +
+  geom_point(aes(color = Species)) +
+  geom_smooth(aes(color = Species),
+              method = "lm",
+              se = F) +
+  theme_bw() + 
+  theme(
+    legend.position = "bottom"
+  ) +
+  facet_wrap(~Species)
+
+
+# Faceting (small multiples) with overall 
+#  (cool example of power of working with layers!)
+# Note that we need a 2nd data (without factor)
+raw4_nofactor <- raw4 %>% 
+  select(Culmen_Length_mm, Culmen_Depth_mm)
+
+ggplot() +
+  geom_point(data = raw4_nofactor, 
+             aes(x = Culmen_Length_mm,
+                 y = Culmen_Depth_mm),
+             color = "grey85") +
+  geom_point(data = raw4, 
+             aes(x = Culmen_Length_mm,
+                 y = Culmen_Depth_mm,
+                 color = Species)) +
+  geom_smooth(data = raw4,
+              aes(x = Culmen_Length_mm,
+                  y = Culmen_Depth_mm,
+                  color = Species),
+              method = "lm",
+              formula = 'y ~ x',
+              # formula = 'y ~ poly(x, 2)', # for 2nd degree polynomial regression (just FYI)
+              se = F) +
+  # coord_fixed(ratio = 1) + # for x and y to have same ratio
+  theme_bw() + 
+  theme(
+    legend.position = "bottom"
+    # aspect.ratio = 1 # dimension of the plot (as ration of y and x axis size)
+  ) +
+  facet_wrap(~Species)
+
+
+
+## Exporting figures with `ggsave()` ------------------------------
+
+# Best way to ensure reproducible plots in terms of size
+#  (you can also use "Export" from the Plots pane but then need to note down the size used)
+
+ggsave(# _plot name_ if you have it, else it will save the last one printed 
+       filename = "./out/pengiuins_smallmultiples.png", 
+       dpi = 300, # for publications  
+       units = "cm", 
+       width = 23, height = 13,
+       bg = "white")
+
+
+
+
+## Stats directly in ggplot with `stat_summary()` ------------------------------------------
+
+# Median, mean, CI ... can also be calculated and plotted in one-go 
+#  (as opposed to first calculate and then inject into ggplot)
+#  (e.g., from before: `geom_smooth()` but can also do more!)
+
+ggplot(data = raw4, aes(x = Sex,
+                        y = Body_Mass_g,
+                        color = Species)) +
+  geom_jitter(width = 0.2) +
+  stat_summary(
+    fun = mean,
+    fun.min = function(x) mean(x) - sd(x), 
+    fun.max = function(x) mean(x) + sd(x), 
+    geom = "errorbar",
+    width = 0,
+    size = 1,
+    color = "black") +
+  stat_summary(
+    aes(fill = Species),
+    fun = mean,
+    geom = "point",
+    shape = 21, # 23
+    size = 5,
+    stroke = 1.5,
+    color = "black") +
+  theme_bw() + 
+  theme(
+    legend.position = "bottom"
+  ) +
+  facet_wrap(~Species)
 
 
 
 
 
-# ggplot() --------------------------------------------------
-
-## Works with layers -------------------
-
-# Build up plot ... (basic plot is easier in base R but ggplot blows minds for complex designs)
 
 
-
-## Exploratory data viz: geom_point() to check recorded observations -----------------------
-
-
-
-## Explanatory data viz: scatter plot with correlation, box plots ... --------------------------
-
-
-
-## Explanatory data viz2: small multiples with overall comparison --------------------------
 
 
 

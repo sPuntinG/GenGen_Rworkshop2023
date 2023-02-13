@@ -41,9 +41,10 @@ vignettes/*.pdf
 # Ignore all "old" folders (where I drop old versions of plots or scripts)
 # ** = any number of directories
 # final / = ignore entire directory (without it will ignore files and folders with that name)
-**/old/
 **/ignore/
+**/old/
+*_old.*
 
-# Ignore "exsitu_spawning" until data approved for sharing
-**/exsitu_spawning/
+# Don't track output folder
+**/out/
 
