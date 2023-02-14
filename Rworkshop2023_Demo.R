@@ -277,6 +277,11 @@ raw3 %>%
 #  a list/string of values
 #  such as 1, 21, 37, 47, 96 and 99 (for some hypothetical reason)
 
+# Long version 
+raw3 %>% 
+  filter(N_nr == 1 | N_nr == 21 |  N_nr == 21 | N_nr == 37 | N_nr == 47 | N_nr == 96 | N_nr == 99 )
+
+# Short version with %in%
 N_to_keep <- c(1, 21, 37, 47, 96, 99)
 
 raw3_Ntokeep <- raw3 %>% 
