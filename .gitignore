@@ -48,3 +48,6 @@ vignettes/*.pdf
 # Don't track output folder
 **/out/*
 
+# Ignore PowerPoints (coz those have my notes, so better to just track pdfs)
+*.pptx
+

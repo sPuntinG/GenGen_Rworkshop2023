@@ -12,6 +12,11 @@ library(here) # To work with relative (to the script location) paths (no more se
 here() # prints path to current working directory
 
 
+# Create directory for output files --------------------
+#  To keep output separated from the original/raw data
+dir.create(here("out"))
+
+
 # Import data (palmer_rawdata) --------------------------------
 
 # Note that:
