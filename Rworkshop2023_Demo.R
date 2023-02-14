@@ -85,10 +85,11 @@ raw$Species %>% unique() # all good
 # Note: be careful with this: it will replace all "Gentoo" 
 
 
-## Check nr of replicates per study (use group_by() + summarize() ) ------------------------
+
+## Check nr of replicates per study (use `group_by()` + `summarize()` ) ------------------------
 
 # Data was collected in 3 separate studies
-# I want to see how many samples ("Sample_Number") where taken per study ("studyName")
+# I want to see how many samples ("Sample_Number") where taken per study ("Study_Name")
 raw %>% 
   group_by(Study_Name) %>% 
   summarise(nr_of_samples = length(Sample_Number)) %>% 
@@ -131,6 +132,10 @@ PAL0910 <- read_csv("./in/PAL0910.csv")
 nrow(PAL0910) # 120 rows (also see from 'Environment')
 ncol(PAL0910) # 13 cols 
 
+raw %>% 
+  filter(Study_Name == "PAL0910") %>% 
+  nrow() # 16 rows 
+
 
 ## Before joining: Check -----------
 
@@ -144,19 +149,13 @@ names(PAL0910) == names(raw) # looks like name of 1st var of PAL0910 doesn't mat
 names(PAL0910)[1] 
 names(raw)[1]
 
-# Let's rename it
-PAL0910 <- PAL0910 %>% 
-  rename(Study_Name = studyName)
-
-names(PAL0910) == names(raw) # now we can join
-# Note: You don't need ALL variables to be found in both tibbles! 
-#  But in this case is convenient ...
- 
 
 
 ## full_join: keep everything ---------------------
 
-raw2 <- full_join(raw, PAL0910) 
+raw2 <- full_join(raw, PAL0910, by = c("Study_Name" = "studyName", # since differnt var name we need to manually tell whic one corresponds to which
+                                       "Sample_Number", "Species", "Island", "Individual_ID", "Date_Egg", "Culmen_Length_mm",
+                                         "Culmen_Depth_mm", "Flipper_Length_mm", "Body_Mass_g", "Sex", "Delta_15_N", "Delta_13_C")) 
 # Note that full_join() automatically identifies cols with same name (if none it wil tell you and you can specify it manually)
 # Note that "raw2" has 104 more rows than "raw" (344 - 240)
 
@@ -166,9 +165,9 @@ raw2 <- full_join(raw, PAL0910)
 
 # Rows of PAL0910 that were NOT present in raw
 # (a way to double check that the merging is correct: e.g. it didn't create duplicated values)
-new_data <- anti_join(PAL0910, raw) #%>% view()
+latest_data <- anti_join(PAL0910, raw) #%>% view()
 
-nrow(new_data) # 104 (matches with previous comment)
+nrow(latest_data) # 104 (matches with previous comment)
 
 
 rm(raw)
@@ -178,6 +177,7 @@ rm(raw)
 # Work with "character" data (string manipulation) -------------------------------
 
 # Let's focus on the variable "Individual_ID" (unique penguin id code)
+
 
 ## Some (base R) functions that I find useful ---------------------
 
@@ -250,8 +250,8 @@ raw3 %>%
 # Extract info from Individual_ID as "N_nr" and "A_nr" (keep only nr that follow N and A)
 
 # Use str_view() to test regex
-stringr::str_view_all(raw3$Individual_ID[1], "^[:alpha:]{1}[:digit:]{1,2}") # keep N + nr
-stringr::str_view_all(raw3$Individual_ID[1], "N[:digit:]{1,2}")         # same as above, keep N + nr
+stringr::str_view_all(raw3$Individual_ID[111], "^[:alpha:]{1}[:digit:]{1,2}") # keep N + nr
+# stringr::str_view_all(raw3$Individual_ID[111], "N[:digit:]{1,2}")         # same as above, keep N + nr
 stringr::str_view_all(raw3$Individual_ID[111], "(?<=N)[:digit:]{1,}") # >=1 digits preceded by "N"
 
 raw3 <- raw3 %>% 
@@ -260,16 +260,24 @@ raw3 <- raw3 %>%
     A_nr = str_extract(Individual_ID, "(?<=A)[:digit:]{1,}")
   ) %>% 
   relocate(N_nr, .after = Individual_ID) %>% 
-  relocate(A_nr, .after = N_nr) # %>% view()
+  relocate(A_nr, .after = N_nr)  #%>% view()
 
 
 
 # Filter() with %in% -----------------
 
-# Let's say we want to only keep observations where N_nr matches a string of values
-#  e.g., only when = to 1, 21, 47, 96 and 99 (for some hypothetical reason)
+# Can filter using boolean operators (multiple conditions)
+raw3 %>% 
+  filter(N_nr == 1 & A_nr == 1 | A_nr == 2) %>% 
+  view()
 
-N_to_keep = c(1, 21, 47, 96, 99)
+# But in some cases I want to filter based on values of just one variable 
+#  but using a long list of values, for example,
+#  let's say we want to only keep observations where N_nr matches any element of
+#  a list/string of values
+#  such as 1, 21, 37, 47, 96 and 99 (for some hypothetical reason)
+
+N_to_keep <- c(1, 21, 37, 47, 96, 99)
 
 raw3_Ntokeep <- raw3 %>% 
   filter(N_nr %in% N_to_keep)
@@ -278,7 +286,7 @@ raw3_Ntokeep <- raw3 %>%
 
 # Mutate() + case_when() paste() & {stringr} -------------------
 
-# Current "Species' var is a bit long and unpractical ... let's extract info as
+# Current "Species" var is a bit long and unpractical ... let's extract info as
 #  new cols:
 #  - "Vernacular" = colloquial spp names
 #  - "Scientific" = just the scientific name
@@ -332,10 +340,10 @@ raw3 %>%
 
 # Split cells (genus-/-species) ---------------------------
 raw3 %>% 
-  separate(Scientific, 
-           into = c("Scientific_Genus", "Scientific_species"), # names of new vars
-           sep = " ", # define deparator
-           remove = F) %>% # to keep var "Species"
+  tidyr::separate(Scientific, 
+                  into = c("Scientific_Genus", "Scientific_species"), # names of new vars
+                  sep = " ", # define separator
+                  remove = F) %>% # to keep var "Species"
   view()
   
 
@@ -354,6 +362,7 @@ raw3 %>%
 ## Import excel table -----------------------------------
 
 library(readxl)
+
 comments <- readxl::read_excel("./in/Palmer_comments.xlsx") # {readxl} not part of tidyverse
 
 # Note that the table has a "wide" format, which is unpractical
@@ -403,8 +412,8 @@ write_csv(raw4, "./out/raw4.csv")
 raw4 %>% 
   group_by(Species, Sex, Island) %>% 
   summarise(across(where(is.numeric), ~ mean(.x, na.rm = TRUE))) %>% 
-  select(-Sample_Number) %>%  # exclude because doesn't meke sense to calc. mean of this
-  arrange(desc(Sex)) %>% # use to arrange display (in this case Male/Female) 
+  select(-Sample_Number) %>%   # exclude because doesn't meke sense to calc. mean of this
+  arrange(desc(Species)) %>% # use to arrange display (in this case Male/Female) 
   view() %>% 
   write_csv(., "./out/raw4_means.csv")
   
@@ -429,6 +438,7 @@ ggplot(data = raw4, aes(x = Culmen_Length_mm,
 
 # ... but ggplot blows minds for complex designs
 
+
 ### Building up a ggplot step by step (use layers) ------------------
 
 # Canvas only
@@ -450,7 +460,8 @@ ggplot(data = raw4, aes(x = Culmen_Length_mm,
                         y = Culmen_Depth_mm)) +
   geom_point(aes(color = Species)) +
   geom_smooth(aes(color = Species),
-              method = "lm")
+              method = "lm",
+              ormula = 'y ~ x')
 
 # Change theme to look nicer
 ggplot(data = raw4, aes(x = Culmen_Length_mm,
@@ -471,6 +482,7 @@ ggplot(data = raw4, aes(x = Culmen_Length_mm,
   geom_point(aes(color = Species)) +
   geom_smooth(aes(color = Species),
               method = "lm",
+              formula = 'y ~ x',
               se = F) +
   theme_bw() + 
   theme(
@@ -538,6 +550,7 @@ ggplot(data = raw4, aes(x = Sex,
                         color = Species)) +
   geom_jitter(width = 0.2) +
   stat_summary(
+    aes(group = Species),
     fun = mean,
     fun.min = function(x) mean(x) - sd(x), 
     fun.max = function(x) mean(x) + sd(x), 
