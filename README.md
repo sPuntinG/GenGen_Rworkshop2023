@@ -1,6 +1,7 @@
 # GenGen_Rworkshop2023
 
-This is the material for the "**GenGen Workshop: R for Reproducible Research and Data Wrangling**" by *Giulia Puntin* (JLU Giessen, Germany) (me 😉).     
+This is the material for the "**GenGen Workshop: R for Reproducible Research and Data Wrangling**"     
+by *Giulia Puntin* (me 😉).     
 
 
 Feel free to 📥download, 🐱‍💻play around with it, and 💬get in touch if you have any feedback or comments!
