@@ -51,3 +51,6 @@ vignettes/*.pdf
 # Ignore PowerPoints (coz those have my notes, so better to just track pdfs)
 *.pptx
 
+# Windows temporary files
+~$*
+
