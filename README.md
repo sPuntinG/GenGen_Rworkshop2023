@@ -3,27 +3,52 @@
 This is the material for the "**GenGen Workshop: R for Reproducible Research and Data Wrangling**" by *Giulia Puntin* (JLU Giessen, Germany) (me 😉).     
 Feel free to download 📥 and play around with it!
 
+----------------------------------
+
+## Description
+**R for Reproducible data wrangling**     
+**What happens before the stats: the power of R Tidyverse for wrangling, cleaning, and exploring your data.**
+
+**Rationale**: Most biologists use R for data analysis and visualization. But most still rely on spreadsheets to go from the raw data to data tables suited for specific uses (e.g., a statistical test or plotting). This makes analysis messy, unnecessarily frustrating, and, most importantly, not reproducible. Here we will learn how to do it all within the same workflow using the powerful and intuitive functions of the Tidyverse (includes ggplot!).
+
+**Goal**: reproducible research & higher efficiency in data wrangling (& more fun!)
+
+**Target audience**:
++ R novices
++ R intermediate users that are not familiar with the Tidyverse
+
+**This workshop covers**:
++ The concept of reproducible research and the importance of always manipulating data through (R) scripts
++ Introduction to the powerful and versatile Tidyverse
++ Working example of **R script** (+ associated dummy **data** set) to simulate a data analysis workflow that covers the most useful functions to explore, check, correct, reshape, and visualize biological data
+
+**This workshop does NOT cover**:
++ Download and installation of R and R Studio
++ Explanation of the basics of the R coding language
 
 
-### 📅 When? 
+------------------------------------------------
+## Info for attendees
+
+#### 📅 When? 
 Wednesday, 15 February 2023, 9am–12pm
 
-### 🌏 Where? 
+#### 🌏 Where? 
 46-230 (Andrew N. Liveris Building, Collaborative Room), UQ campus St. Lucia, QLD, Australia
 
-### 💰 Cost? 
+#### 💰 Cost? 
 FREE
 
-### 🧳 What to bring? 
+#### 🧳 What to bring? 
 Your own laptop with R, R Studio, and the tidyverse package installed
 
-### 📜 What to prepare?
+#### 📜 What to prepare?
 Familiarise yourself with the following core concepts of R (no need to become an expert, just don’t be overwhelmed by new terminology):
 + Data structures: vectors, matrices, arrays, data frames, and lists
 + Data types (classes): know that they exist and have a rough understanding of what they mean
 + R functions and R packages
 
-### ✍🏽 Registration and additional info 
+#### ✍🏽 Registration and additional info 
 More detailed information is available on the event **registration** page: https://www.eventbrite.com.au/e/535202784937/     
 Please register by **Tuesday 14 February 2023** so we can better manage the logistics!
 
